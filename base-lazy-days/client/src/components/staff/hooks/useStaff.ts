@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Dispatch, SetStateAction, useState } from 'react';
+import { Dispatch, SetStateAction, useCallback, useState } from 'react';
 
 import type { Staff } from '@shared/types';
 
@@ -25,9 +25,19 @@ export function useStaff(): UseStaff {
   const [filter, setFilter] = useState('all');
   const fallback: Staff[] = [];
 
+  const selectFn = useCallback(
+    (unFilteredStaff: Staff[]) => {
+      return filter === 'all'
+        ? unFilteredStaff
+        : filterByTreatment(unFilteredStaff, filter);
+    },
+    [filter]
+  );
+
   const { data: staff = fallback } = useQuery({
     queryKey: [queryKeys.staff],
     queryFn: getStaff,
+    select: selectFn,
   });
 
   return { staff, filter, setFilter };

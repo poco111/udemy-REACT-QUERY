@@ -22,6 +22,13 @@ function errorHandler(type: 'query' | 'mutation', errorMsg: string) {
 // to satisfy typescript until this file has uncommented contents
 
 export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 600000,
+      gcTime: 900000,
+      refetchOnWindowFocus: false,
+    },
+  },
   queryCache: new QueryCache({
     onError: (error) => {
       errorHandler('query', error.message);

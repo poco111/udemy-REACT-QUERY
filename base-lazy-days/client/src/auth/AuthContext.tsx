@@ -1,14 +1,15 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState } from 'react';
 
 import {
   clearStoredLoginData,
   getStoredLoginData,
   setStoredLoginData,
-} from "./local-storage";
-import { LoginData } from "./types";
+} from './local-storage';
+import { LoginData } from './types';
 
 type AuthContextValue = {
-  loginData: LoginData;
+  userId: number | null;
+  userToken: string | null;
   setLoginData: (loginData: LoginData) => void;
   clearLoginData: () => void;
 };
@@ -20,7 +21,7 @@ export const useLoginData = () => {
   const authId = useContext(AuthContext);
   if (!authId) {
     throw new Error(
-      "Error! AuthContext called from outside the AuthContextProvider"
+      'Error! AuthContext called from outside the AuthContextProvider'
     );
   }
 
@@ -34,6 +35,9 @@ export const AuthContextProvider = ({
     getStoredLoginData()
   );
 
+  const userId = loginData?.userId;
+  const userToken = loginData?.userToken;
+
   const setLoginData = ({ userId, userToken }: LoginData) => {
     setLoginDataRaw({ userId, userToken });
     setStoredLoginData({ userId, userToken });
@@ -45,7 +49,9 @@ export const AuthContextProvider = ({
   };
 
   return (
-    <AuthContext.Provider value={{ loginData, clearLoginData, setLoginData }}>
+    <AuthContext.Provider
+      value={{ userId, userToken, clearLoginData, setLoginData }}
+    >
       {children}
     </AuthContext.Provider>
   );

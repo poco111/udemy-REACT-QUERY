@@ -1,14 +1,28 @@
 import dayjs from 'dayjs';
-import { Dispatch, SetStateAction, useState, useEffect } from 'react';
+import {
+  Dispatch,
+  SetStateAction,
+  useState,
+  useEffect,
+  useCallback,
+} from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { axiosInstance } from '@/axiosInstance';
 import { useUser } from '@/components/user/hooks/useUser';
+import { useLoginData } from '@/auth/AuthContext';
 import { queryKeys } from '@/react-query/constants';
 
 import { AppointmentDateMap } from '../types';
+// 데이터에 대한 일부 변환을 수행하는 getAvailableAppointments 함수를 가져온다
 import { getAvailableAppointments } from '../utils';
 import { getMonthYearDetails, getNewMonthYear, MonthYear } from './monthYear';
+
+// 정적인 데이터이기 때문에 컴포넌트 외부에 선언하여 useEffect 종속성에서 제외
+const commonQueryOptions = {
+  staleTime: 0,
+  gcTime: 30000, // 5 minutes 기본값
+};
 
 // for useQuery call
 async function getAppointments(
@@ -58,7 +72,22 @@ export function useAppointments(): UseAppointments {
   // We will need imported function getAvailableAppointments here
   // We need the user to pass to getAvailableAppointments so we can show
   //   appointments that the logged-in user has reserved (in white)
-  const { user } = useUser();
+  const { userId } = useLoginData();
+
+  const selectFn = useCallback(
+    (data: AppointmentDateMap, showAll: boolean) => {
+      return showAll ? data : getAvailableAppointments(data, userId);
+    },
+    [userId]
+  );
+
+  // showAll을 매개변수로 전달하지 않는 경우
+  // const selectFn = useCallback(
+  //   (data: AppointmentDateMap) => {
+  //     return showAll ? data : getAvailableAppointments(data, userId);
+  //   },
+  //   [userId, showAll]
+  // );
 
   /** ****************** END 2: filter appointments  ******************** */
   /** ****************** START 3: useQuery  ***************************** */
@@ -75,6 +104,13 @@ export function useAppointments(): UseAppointments {
   const { data: appointments = fallback } = useQuery({
     queryKey: [queryKeys.appointments, monthYear.year, monthYear.month],
     queryFn: () => getAppointments(monthYear.year, monthYear.month),
+    // selectFn에는 uesQuery 쿼리 함수에서 반환된 데이터가 전달된다
+    select: (data) => selectFn(data, showAll),
+    // showAll을 매개변수로 전달하지 않는 경우
+    // select: selectFn,
+    refetchOnWindowFocus: true,
+    refetchInterval: 60000, // every minute
+    ...commonQueryOptions,
   });
 
   const queryClient = useQueryClient();
@@ -88,6 +124,7 @@ export function useAppointments(): UseAppointments {
         nextMonthYear.month,
       ],
       queryFn: () => getAppointments(nextMonthYear.year, nextMonthYear.month),
+      ...commonQueryOptions,
     });
   }, [monthYear, queryClient]);
 
